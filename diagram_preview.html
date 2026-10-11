@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Architecture Diagram Preview</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --card-bg: #161b22;
+      --border: #30363d;
+      --text: #e6edf3;
+      --accent: #58a6ff;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+    header {
+      padding: 16px 24px;
+      background: var(--card-bg);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+    h1 {
+      font-size: 1.15rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .badge {
+      font-size: 0.75rem;
+      background: #238636;
+      color: #fff;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-weight: 500;
+    }
+    .controls {
+      display: flex;
+      gap: 8px;
+    }
+    button {
+      background: #21262d;
+      color: var(--text);
+      border: 1px solid var(--border);
+      padding: 6px 14px;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: background 0.2s, border-color 0.2s;
+    }
+    button:hover {
+      background: #30363d;
+      border-color: var(--accent);
+    }
+    main {
+      flex: 1;
+      overflow: auto;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 30px;
+    }
+    .mermaid-container {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 30px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+      min-width: 800px;
+    }
+    .mermaid {
+      display: flex;
+      justify-content: center;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>
+      <span>🏗️ GitHub PR Code Reviewer Architecture</span>
+      <span class="badge">Mermaid Flowchart</span>
+    </h1>
+    <div class="controls">
+      <button onclick="window.print()">🖨️ Print / Save PDF</button>
+      <button onclick="location.reload()">🔄 Refresh</button>
+    </div>
+  </header>
+
+  <main>
+    <div class="mermaid-container">
+      <div class="mermaid">
+flowchart TB
+
+%% USERS / ENTRY
+A["👨‍💻 Developer Creates Pull Request on GitHub"] --> B["🐙 GitHub PR Event"]
+B --> C["🌐 Public Webhook URL"]
+
+%% INFRA ENTRY
+C --> D["⚖️ AWS Application Load Balancer"]
+
+%% GATEWAY
+D --> E["🚪 Gateway Service : FastAPI"]
+E --> E1["Verify HMAC Signature"]
+E --> E2["Reject Fake Requests"]
+E --> F["📩 Forward Verified Event"]
+
+%% WEBHOOK
+F --> G["🪝 Webhook Service : FastAPI"]
+G --> G1["Parse PR Number / Repo / SHA"]
+G --> G2["Deduplicate Existing SHA"]
+G --> G3["Store PR Metadata"]
+
+%% DATABASE
+G3 --> DB[("🗄️ PostgreSQL RDS")]
+
+%% QUEUE
+G --> H["📬 Push Job to Redis Queue"]
+H --> R[("⚡ Redis / ElastiCache")]
+
+%% WORKER
+R --> I["⚙️ Celery Worker"]
+
+%% ORCHESTRATOR
+I --> J["🧠 Orchestrator Service"]
+J --> J1["Fetch Code Diff from GitHub API"]
+J --> J2["Load Past Repo Patterns"]
+J --> J3["Run LangGraph Multi-Agent Review"]
+
+%% AI AGENTS
+J3 --> K1["🔍 Static Analysis Agent"]
+J3 --> K2["🛡️ Security Agent"]
+J3 --> K3["🎨 Style Agent"]
+J3 --> K4["🏗️ Architecture Agent"]
+
+K1 --> L["Merge Findings"]
+K2 --> L
+K3 --> L
+K4 --> L
+
+L --> M["Remove Duplicate Comments"]
+M --> N["Save Findings to DB"]
+
+N --> DB
+
+%% REVIEWER
+M --> O["💬 Reviewer Service"]
+O --> O1["Generate GitHub App JWT"]
+O --> O2["Create Installation Token"]
+O --> O3["Post Inline Comments"]
+O --> O4["Post Summary Review"]
+
+O --> P["🐙 GitHub Pull Request Updated"]
+
+%% FEEDBACK LOOP
+P --> Q["Developer Fixes Code & Pushes Again"]
+Q --> B
+
+%% MERGE EVENT
+P --> Z{"PR Merged?"}
+Z -->|Yes| AA["📘 Learner Worker"]
+AA --> AB["📈 Learner Service"]
+AB --> AC["Extract Frequent Issues"]
+AC --> AD["Store Repo Patterns"]
+AD --> DB
+AD --> AE["Future Reviews Become Smarter"]
+
+%% MONITORING
+subgraph Monitoring["📊 Monitoring & Observability"]
+MO1["📊 Prometheus"]
+MO2["📉 Grafana"]
+MO3["🧾 LangFuse"]
+end
+
+E --> MO1
+G --> MO1
+J --> MO1
+O --> MO1
+J --> MO3
+MO1 --> MO2
+
+%% DEPLOYMENT
+subgraph DevOps["🚀 DevOps CI/CD"]
+CI1["GitHub Actions"]
+CI2["Docker Build"]
+CI3["AWS ECR"]
+CI4["EKS Kubernetes Cluster"]
+end
+
+CI1 --> CI2
+CI2 --> CI3
+CI3 --> CI4
+CI4 --> E
+CI4 --> G
+CI4 --> J
+CI4 --> O
+CI4 --> AB
+CI4 --> I
+      </div>
+    </div>
+  </main>
+
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'dark',
+      flowchart: {
+        curve: 'basis'
+      }
+    });
+  </script>
+</body>
+</html>
