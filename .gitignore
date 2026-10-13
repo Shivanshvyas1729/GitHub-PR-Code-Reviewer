@@ -1,2 +1,5 @@
 .env
 docs_personal/
+__pycache__/
+.venv/
+CODE/
